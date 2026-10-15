@@ -2,6 +2,8 @@
 
 You are building a 'meta-repo' tool. This contains a .devcontainer configuration the users can use to open several repos inside a docker container.
 
+Read additional details in [DECISIONS.md](./DECISIONS.md)
+
 The structure of this repo:
 
 ```
