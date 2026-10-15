@@ -1,0 +1,39 @@
+# Personal meta-repo config. Copy to meta-repo.local.yaml (gitignored) and edit:
+#
+#   cp meta-repo.local.yaml.template meta-repo.local.yaml
+#
+# Values here override meta-repo.yaml. Folders are combined with the shared
+# list, matched on `path`.
+
+# The host folder your repos live in. `~` is expanded.
+root: "~/git-workspace"
+
+# Values for the env keys declared in meta-repo.yaml. Every declared key needs
+# a value.
+#
+# `$VAR` / `${VAR}` references are NOT expanded by apply.sh. Compose resolves
+# them from the host environment when the container starts, so secrets never
+# get written to compose.local.yaml. Write `$$` for a literal `$`.
+env:
+  SOME_API_KEY: $I_CAN_REFERENCE_ENV_VARS
+
+# Optional proxies. Leave a value empty (or delete it) for no proxy.
+# Build-time and runtime are separate because they can differ.
+proxy:
+  # Used only while building the image (apt, curl, installers).
+  buildtime:
+    http_proxy: ""
+    https_proxy: ""
+    no_proxy: ""
+  # Set as HTTP_PROXY / HTTPS_PROXY / NO_PROXY (and lowercase) in the container,
+  # for tools like npm, gh and claude.
+  runtime:
+    http_proxy: ""
+    https_proxy: ""
+    no_proxy: ""
+
+# Optional extra folders just for you, same format as in meta-repo.yaml.
+# folders:
+#   - path: "my-scratch-repo"
+#     separate_mounts:
+#       - node_modules

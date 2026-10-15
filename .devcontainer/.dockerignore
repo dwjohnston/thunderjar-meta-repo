@@ -1,0 +1,7 @@
+# The build context is .devcontainer/. Only the Dockerfile, the entrypoint and
+# (optionally) certs/ are needed.
+*
+!Dockerfile
+!docker-entrypoint.sh
+!certs
+!certs/**

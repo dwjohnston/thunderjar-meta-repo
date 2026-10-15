@@ -1,0 +1,30 @@
+# Shared meta-repo config, committed and the same for the whole team.
+#
+# Per-person values (root, env values, proxies, extra folders) go in
+# meta-repo.local.yaml. Copy meta-repo.local.yaml.template to get started.
+# After changing either file, run ./apply.sh and rebuild the container.
+
+# Used as the Compose project name and as a prefix on all volume names, so
+# separate meta-repos never share volumes. Lowercase letters, digits, - and _.
+metarepo_id: "my-meta-repo"
+
+# Folders under each person's `root` (set in meta-repo.local.yaml) that make up
+# the meta-repo. Each is mounted at /workspace/<folder name>.
+#
+# separate_mounts are paths inside the folder that get a named volume instead
+# of binding back to the host, e.g. node_modules, so macOS and Linux builds of
+# dependencies don't conflict.
+folders:
+  - path: "blacksheepcode2"
+    separate_mounts: 
+      - node_modules
+
+# Container directories kept across rebuilds, so tools don't need to be
+# reinstalled each time. <volume name>: <container path>
+persistent_volumes:
+  tool-cache: /home/vscode/.cache
+
+# Environment variables the container expects. Declare the keys here and leave
+# the values empty; each person sets the values in meta-repo.local.yaml.
+env:
+  SOME_API_KEY: 

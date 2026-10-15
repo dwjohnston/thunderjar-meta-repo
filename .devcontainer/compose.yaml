@@ -1,0 +1,61 @@
+# Static part of the dev container's Compose config, shared by everyone.
+#
+# Everything host- or person-specific (your repos, separate_mounts,
+# persistent_volumes, env, proxies, volume names) lives in compose.local.yaml,
+# which ./apply.sh generates from meta-repo.yaml + meta-repo.local.yaml.
+# Relative paths here are relative to this .devcontainer/ directory.
+services:
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    init: true
+    volumes:
+      # Read-only copies of the environment definition, so agents can see how
+      # their environment is built. compose.local.yaml is deliberately excluded
+      # because it contains host paths.
+      - type: bind
+        source: ./Dockerfile
+        target: /workspace/.workspace/Dockerfile
+        read_only: true
+      - type: bind
+        source: ./devcontainer.json
+        target: /workspace/.workspace/devcontainer.json
+        read_only: true
+      - type: bind
+        source: ./compose.yaml
+        target: /workspace/.workspace/compose.yaml
+        read_only: true
+
+      # Shared skills, read-write so host edits show up live and agents can
+      # edit their own skills. Also exposed where Claude Code looks for skills.
+      - type: bind
+        source: ../.agents
+        target: /workspace/.agents
+      - type: bind
+        source: ../.agents/skills
+        target: /workspace/.claude/skills
+
+      # Persisted agent conversations/state. Only these specific paths are
+      # persisted, never all of ~/.vscode-server (extension version conflicts).
+      - type: volume
+        source: copilot
+        target: /home/vscode/.copilot
+      - type: volume
+        source: vscode-agent-sessions
+        target: /home/vscode/.vscode-server/data/agentSessionData
+      - type: volume
+        source: vscode-global-storage
+        target: /home/vscode/.vscode-server/data/User/globalStorage
+      - type: volume
+        source: claude
+        # Also holds .claude.json; the entrypoint symlinks ~/.claude.json here.
+        target: /home/vscode/.claude
+
+# compose.local.yaml gives each of these an explicit name prefixed with
+# metarepo_id, so separate meta-repos never share volumes.
+volumes:
+  copilot:
+  vscode-agent-sessions:
+  vscode-global-storage:
+  claude:

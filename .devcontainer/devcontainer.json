@@ -1,0 +1,32 @@
+// Meta-repo dev container.
+// Run ./apply.sh on the host first: it generates compose.local.yaml.
+{
+  "name": "meta-repo",
+  "dockerComposeFile": ["compose.yaml", "compose.local.yaml"],
+  "service": "dev",
+  "workspaceFolder": "/workspace",
+  "remoteUser": "vscode",
+  // Remap vscode to the host UID on Linux hosts (no-op on macOS).
+  "updateRemoteUserUID": true,
+  "shutdownAction": "stopCompose",
+
+  // Fail early, with a useful message, if apply.sh hasn't been run.
+  "initializeCommand": "test -f .devcontainer/compose.local.yaml || { echo 'meta-repo: .devcontainer/compose.local.yaml is missing. Run ./apply.sh on the host first.' >&2; exit 1; }",
+
+  "features": {
+    // Docker-in-Docker, including the Docker Compose v2 plugin.
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "dockerDashComposeVersion": "v2"
+    }
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "anthropic.claude-code",
+        "GitHub.copilot",
+        "GitHub.copilot-chat"
+      ]
+    }
+  }
+}
