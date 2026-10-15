@@ -52,7 +52,10 @@ The template is meant to be forked by a team. Values the whole team shares are c
 
 - **Base image:** the Microsoft dev containers Ubuntu image, pinned to an Ubuntu release (e.g. `ubuntu-24.04`).
 - **Docker-in-Docker:** use the official `docker-in-docker` dev container feature in `devcontainer.json`, not a hand-rolled install.
-- **Proxy:** values come explicitly from the meta-repo yaml, never picked up automatically from the host environment. They are passed as build args and also set as container env vars, because tools at runtime (`npm`, `gh`, `claude`) need them too. *(Assumed; not explicitly confirmed.)*
+- **Proxy:** values come explicitly from the meta-repo yaml, never picked up automatically from the host environment. Build-time and runtime proxies are configured separately, because they can differ:
+  - `BUILDTIME_HTTP_PROXY`, `BUILDTIME_HTTPS_PROXY`, `BUILDTIME_NO_PROXY` are passed as build args only. The Dockerfile maps them to the standard `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` (and lowercase variants) for the build steps. They are not kept in the final image's environment.
+  - `RUNTIME_HTTP_PROXY`, `RUNTIME_HTTPS_PROXY`, `RUNTIME_NO_PROXY` are set as container env vars, mapped to the standard names, for tools like `npm`, `gh` and `claude`.
+  - Each set is optional. If one is unset, no proxy is configured for that phase.
 - **Versions:**
   - **Node:** `nvm install --lts` at build time. Repos with an `.nvmrc` use their own version via `nvm use`.
   - **bun, Claude CLI:** latest at build time. The Claude CLI updates itself.
