@@ -105,6 +105,9 @@ RUN curl -fsSL https://bun.sh/install | bash
 # Claude Code CLI (latest at build time; it updates itself afterwards)
 RUN curl -fsSL https://claude.ai/install.sh | bash
 
+# OpenAI Codex CLI (latest at build time), installed globally into the default Node
+RUN . "$NVM_DIR/nvm.sh" && npm install -g @openai/codex
+
 ENV PATH=/home/vscode/.local/bin:/home/vscode/.bun/bin:/home/vscode/.nvm/default-node/bin:${PATH}
 
 # ---------------------------------------------------------------------------
