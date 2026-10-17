@@ -21,7 +21,21 @@ metarepo_id: "my-meta-repo"
 # directories only. Matches are found when apply.sh runs, so re-run it after
 # creating new files that should be hidden.
 folders:
-  - path: "blacksheepcode2"
+  - path: "thunderjar"
+    ignore:
+      - .env
+    separate_mounts: 
+      - node_modules
+  - path: "thunderjar2"
+    separate_mounts: 
+      - node_modules
+  - path: "agent-skills"
+    separate_mounts: 
+      - node_modules
+  - path: "compose-md"
+    separate_mounts: 
+      - node_modules
+  - path: "ai-experiments"
     separate_mounts: 
       - node_modules
 
@@ -33,4 +47,5 @@ persistent_volumes:
 # Environment variables the container expects. Declare the keys here and leave
 # the values empty; each person sets the values in meta-repo.local.yaml.
 env:
-  SOME_API_KEY: 
+  THUNDERJAR_TRY_JS_DIR: /workspace/tj-js
+  THUNDERJAR_TRY_NON_JS_DIR: /workspace/tj-nojs

@@ -1,0 +1,6 @@
+# Thunderjar, using the dev container's /workspace paths (only useful inside it;
+# the host-side cd aliases are in aliases.host).
+alias tjjsinit="cd /workspace/tj-js && bunx thunderjar init"
+alias tjnojsinit="cd /workspace/tj-nojs && bunx thunderjar init"
+alias tjjs="cd /workspace/tj-js"
+alias tjnojs="cd /workspace/tj-nojs"
