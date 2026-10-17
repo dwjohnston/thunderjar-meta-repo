@@ -56,7 +56,7 @@ re-run `./apply.sh` and **Dev Containers: Rebuild Container**. Changes to
 | `meta-repo.yaml` (committed) | `meta-repo.local.yaml` (gitignored) |
 |---|---|
 | `metarepo_id` | `root` (host path) |
-| `folders`, `separate_mounts` | `env` values |
+| `folders`, `separate_mounts`, `ignore` | `env` values |
 | `persistent_volumes` | `proxy` |
 | `env` keys | `dotfiles` |
 | | extra personal `folders` |
@@ -64,6 +64,28 @@ re-run `./apply.sh` and **Dev Containers: Rebuild Container**. Changes to
 The local file overrides the shared one. `folders` are combined, matched on
 `path`. Each folder is mounted at `/workspace/<folder name>`, so folder names
 must be unique.
+
+### Hiding files (`ignore`)
+
+List glob patterns under a folder's `ignore` to keep files such as secrets out
+of the container:
+
+```yaml
+folders:
+  - path: "foo"
+    ignore:
+      - .env*            # no `/`: matches the name at any depth
+      - config/**/*.pem  # with `/`: matched from the folder root
+      - secrets/         # trailing `/`: directories only
+```
+
+In the container a matched file appears empty and read-only, and a matched
+directory appears empty. The host files are untouched. `.git` and
+`separate_mounts` are never searched.
+
+Patterns are expanded when `./apply.sh` runs, so a file created later is
+**not** hidden until you re-run `./apply.sh` and rebuild. `apply.sh` lists
+everything it hid.
 
 ### Environment variables and secrets
 
@@ -125,3 +147,11 @@ To start completely fresh, remove the container and then the volumes:
   filesystem and run `./apply.sh` from WSL.
 
 See [DECISIONS.md](DECISIONS.md) for the reasoning behind the design.
+
+
+
+
+## Short comings 
+
+
+- Ignore globs will be lost. 

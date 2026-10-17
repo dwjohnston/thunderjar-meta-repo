@@ -48,3 +48,5 @@ proxy:
 #   - path: "my-scratch-repo"
 #     separate_mounts:
 #       - node_modules
+#     ignore:
+#       - .env*

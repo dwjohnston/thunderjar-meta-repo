@@ -27,6 +27,7 @@ user (which file, what to add) instead of making it.
 |---|---|
 | Add/remove a repo for everyone | `meta-repo.yaml` → `folders` |
 | Keep a dir like `node_modules` off the host | `meta-repo.yaml` → `folders[].separate_mounts` |
+| Hide files like `.env` from the container | `meta-repo.yaml` → `folders[].ignore` (globs) |
 | Keep a cache across rebuilds | `meta-repo.yaml` → `persistent_volumes` |
 | New env var for everyone | `meta-repo.yaml` → `env` (key only) **and** `meta-repo.local.yaml.template` (example value) |
 | A person's own values (host root, secrets, proxies, extra repos) | `meta-repo.local.yaml` (gitignored, per person) |

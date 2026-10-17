@@ -63,12 +63,15 @@ GEN="$TMP_DIR/compose.local.yaml"
 # Merge shared + local config
 #   - scalars and maps: local overrides shared (deep merge)
 #   - folders: concatenated, then entries with the same `path` are merged
-#     (separate_mounts are combined)
+#     (separate_mounts and ignore are combined)
 # ---------------------------------------------------------------------------
 yq eval-all '. as $d ireduce ({}; . * (($d // {}) | del(.folders)))' "$SHARED" "$LOCAL" > "$TMP_DIR/base.yaml" \
     || die "could not parse meta-repo.yaml / meta-repo.local.yaml"
 yq eval-all -o=json -I0 '. as $d ireduce ([]; . + (($d // {}).folders // []))' "$SHARED" "$LOCAL" > "$TMP_DIR/folders.json" \
     || die "could not read 'folders'"
+NOT_LISTS=$(yq -r '.[] | . as $f | (["separate_mounts", "ignore"][] | select(($f[.] // []) | tag != "!!seq") | "folder '\''" + ($f.path // "?") + "'\'': '\''" + . + "'\'' must be a list (each entry starts with \"- \")")' "$TMP_DIR/folders.json") \
+    || die "could not read 'folders'"
+[[ -z "$NOT_LISTS" ]] || die "$NOT_LISTS"
 yq -o=json -I0 '
     . as $all
     | [.[].path] | unique
@@ -77,6 +80,7 @@ yq -o=json -I0 '
         | $all | map(select(.path == $p))
         | .[] as $f ireduce ({}; . *+ $f)
         | .separate_mounts |= ((. // []) | unique)
+        | .ignore |= ((. // []) | unique)
     )' "$TMP_DIR/folders.json" > "$TMP_DIR/folders.merged.json" \
     || die "could not merge 'folders'"
 FOLDERS_JSON=$(cat "$TMP_DIR/folders.merged.json") \
@@ -92,6 +96,9 @@ volume_slug() { printf '%s' "$1" | sed -e 's#[^A-Za-z0-9_.-]#-#g' -e 's#^[-.]*##
 
 # Membership test for newline-separated lists (bash 3.2 has no assoc arrays).
 in_list() { case $'\n'"$2"$'\n' in *$'\n'"$1"$'\n'*) return 0 ;; esac; return 1; }
+
+# Escape glob characters so `find -path` matches a path literally.
+glob_literal() { printf '%s' "$1" | sed 's/[][*?\\]/\\&/g'; }
 
 # Relative path that stays inside its parent: not absolute, no `..`, not empty.
 is_safe_relative() {
@@ -173,6 +180,8 @@ while [[ $i -lt $FOLDER_COUNT ]]; do
             err "folder '$path' does not exist under root ($ROOT/$path)"
         fi
 
+        # Never search inside .git or the separate_mounts (they aren't host files).
+        prune=(-name .git)
         mount_count=$(q ".folders[$i].separate_mounts | length")
         j=0
         while [[ $j -lt $mount_count ]]; do
@@ -186,9 +195,42 @@ while [[ $i -lt $FOLDER_COUNT ]]; do
                     err "separate_mount '$mount' in folder '$path' maps to the same volume name as another mount ($key)"
                 fi
                 VOLUME_KEYS="$VOLUME_KEYS$key"$'\n'
+                prune+=(-o -path "./$(glob_literal "$mount")")
             fi
             j=$((j + 1))
         done
+
+        # ignore: glob patterns, expanded now against the host files. A pattern
+        # without a `/` matches a name at any depth; one with a `/` matches the
+        # path from the folder root (`*` may cross directories). A trailing `/`
+        # matches directories only.
+        match=()
+        ignore_count=$(q ".folders[$i].ignore | length")
+        j=0
+        while [[ $j -lt $ignore_count ]]; do
+            pattern=$(q ".folders[$i].ignore[$j]")
+            dir_only=false
+            [[ "$pattern" == */ ]] && dir_only=true
+            pattern=${pattern%/}
+            if ! is_safe_relative "$pattern"; then
+                err "ignore pattern '$pattern' in folder '$path' must be relative to the folder, without '..'"
+            else
+                [[ ${#match[@]} -gt 0 ]] && match+=(-o)
+                if [[ "$pattern" == */* ]]; then
+                    cond=(-path "./$pattern")
+                else
+                    cond=(-name "$pattern")
+                fi
+                $dir_only && cond+=(-type d)
+                match+=(\( "${cond[@]}" \))
+            fi
+            j=$((j + 1))
+        done
+        if [[ ${#match[@]} -gt 0 && -n "$ROOT" && -d "$ROOT/$path" ]]; then
+            (cd "$ROOT/$path" && find . -mindepth 1 \( "${prune[@]}" \) -prune -o \( "${match[@]}" \) -print -prune) \
+                > "$TMP_DIR/ignored-$i" \
+                || warn "could not search all of folder '$path' for ignored files; some may not be hidden"
+        fi
     fi
     i=$((i + 1))
 done
@@ -348,6 +390,20 @@ while [[ $i -lt $FOLDER_COUNT ]]; do
         add_volume "folder-$(volume_slug "$name")-$(volume_slug "$mount")" "/workspace/$name/$mount"
         j=$((j + 1))
     done
+    # Hide ignored paths: files become an empty read-only file, directories an
+    # empty tmpfs. The host files are untouched.
+    if [[ -f "$TMP_DIR/ignored-$i" ]]; then
+        while IFS= read -r rel; do
+            rel=${rel#./}
+            T="$(compose_literal "/workspace/$name/$rel")"
+            if [[ -d "$ROOT/$path/$rel" ]]; then
+                T="$T" gen '.services.dev.volumes += [{"type": "tmpfs", "target": strenv(T)}]'
+            else
+                T="$T" gen '.services.dev.volumes += [{"type": "bind", "source": "/dev/null", "target": strenv(T), "read_only": true}]'
+            fi
+            echo "/workspace/$name/$rel" >> "$TMP_DIR/hidden"
+        done < "$TMP_DIR/ignored-$i"
+    fi
     i=$((i + 1))
 done
 
@@ -392,6 +448,11 @@ fi
 if [[ -n "$DOTFILES_REL" ]]; then
     echo "  dotfiles (read-only, in $CONTAINER_HOME):"
     printf '%s' "$DOTFILES_REL" | sed 's/^/    /'
+fi
+if [[ -f "$TMP_DIR/hidden" ]]; then
+    echo
+    echo "Hidden by ignore (re-run ./apply.sh to pick up newly created files):"
+    sed 's/^/  /' "$TMP_DIR/hidden"
 fi
 echo
 echo "Next: in VS Code run 'Dev Containers: Rebuild and Reopen in Container'."

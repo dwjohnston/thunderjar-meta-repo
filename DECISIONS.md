@@ -11,7 +11,7 @@ The template is meant to be forked by a team. Values the whole team shares are c
 | `meta-repo.yaml` (committed, shared) | `meta-repo.local.yaml` (gitignored, per person) |
 |---|---|
 | `metarepo_id` | `root` (a host path) |
-| `folders` (paths relative to `root`) and `separate_mounts` | `env` values |
+| `folders` (paths relative to `root`), `separate_mounts` and `ignore` | `env` values |
 | `persistent_volumes` | `proxy` settings |
 | `env` keys (the variables the container expects) | extra personal `folders` (optional) |
 
@@ -27,6 +27,7 @@ The template is meant to be forked by a team. Values the whole team shares are c
   - `root` must be set.
   - Every declared `env` key must have a value.
 - **`metarepo_id`:** used as the Compose project name and as a prefix on all volume names, so separate meta-repos never share volumes.
+- **`ignore`:** per-folder glob patterns for files to hide from the container (e.g. `.env`). Docker can't mount a folder with exclusions, so `apply.sh` expands the globs against the host files and mounts over each match: `/dev/null` (read-only) for a file, an empty `tmpfs` for a directory. The trade-off is that files created after `apply.sh` runs aren't hidden until it's re-run. Patterns follow a subset of `.gitignore` rules: no `/` matches a name at any depth, a `/` anchors to the folder root, a trailing `/` means directories only. `.git` and `separate_mounts` are never searched.
 - **`$VARS` in `env`:** passed through unexpanded and resolved by Compose when the container starts. Secrets are never written to `compose.local.yaml`.
 
 ## Container layout

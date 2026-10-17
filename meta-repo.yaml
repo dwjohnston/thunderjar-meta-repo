@@ -14,6 +14,12 @@ metarepo_id: "my-meta-repo"
 # separate_mounts are paths inside the folder that get a named volume instead
 # of binding back to the host, e.g. node_modules, so macOS and Linux builds of
 # dependencies don't conflict.
+#
+# ignore hides files from the container, e.g. secrets. Each entry is a glob:
+# without a `/` it matches a name at any depth (`.env*`), with a `/` it matches
+# the path from the folder root (`config/**/*.pem`), and a trailing `/` matches
+# directories only. Matches are found when apply.sh runs, so re-run it after
+# creating new files that should be hidden.
 folders:
   - path: "blacksheepcode2"
     separate_mounts: 
