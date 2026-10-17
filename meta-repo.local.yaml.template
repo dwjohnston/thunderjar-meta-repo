@@ -32,6 +32,17 @@ proxy:
     https_proxy: ""
     no_proxy: ""
 
+# Optional dotfiles to bring into the container (aliases, prompt, git config...).
+# Files or directories under your host home, mounted read-only at the same path
+# in the container's home (/home/vscode). Missing ones are skipped with a
+# warning. The image's bash and zsh load ~/.aliases if it exists, so put your
+# portable aliases and functions there (and `source` it from your host rc file).
+# Avoid mounting a whole .zshrc/.bashrc: it replaces the image's own, which sets
+# up nvm, and usually has macOS paths and secrets. VS Code already copies your
+# host .gitconfig. Don't list files containing secrets.
+# dotfiles:
+#   - ~/.aliases
+
 # Optional extra folders just for you, same format as in meta-repo.yaml.
 # folders:
 #   - path: "my-scratch-repo"

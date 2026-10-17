@@ -58,7 +58,8 @@ re-run `./apply.sh` and **Dev Containers: Rebuild Container**. Changes to
 | `metarepo_id` | `root` (host path) |
 | `folders`, `separate_mounts` | `env` values |
 | `persistent_volumes` | `proxy` |
-| `env` keys | extra personal `folders` |
+| `env` keys | `dotfiles` |
+| | extra personal `folders` |
 
 The local file overrides the shared one. `folders` are combined, matched on
 `path`. Each folder is mounted at `/workspace/<folder name>`, so folder names
@@ -72,6 +73,26 @@ starts, so secrets aren't written to disk. They are read from the environment
 of the process that starts the container. On macOS, VS Code launched from the
 Dock may not see variables exported in your shell profile: launch it with
 `code .` from a terminal. Use `$$` for a literal `$`.
+
+### Dotfiles
+
+List files or directories under your host home in `meta-repo.local.yaml` to
+bring your aliases and shell setup into the container:
+
+```yaml
+dotfiles:
+  - ~/.aliases
+```
+
+Each is bind-mounted **read-only** at the same path under `/home/vscode`.
+Missing entries are skipped with a warning. Edits on the host show up live.
+
+The image's `~/.bashrc` and `~/.zshrc` source `~/.aliases` if it exists, so put
+your portable aliases and functions there and `source` it from your host
+`.zshrc`. Don't mount a whole `.zshrc`/`.bashrc`: it would replace the image's
+own (which sets up nvm) and usually contains macOS paths and secrets. VS Code
+already copies your host `.gitconfig` into the container. Don't list files
+containing secrets: everything mounted is readable in the container.
 
 ### Proxies
 

@@ -232,6 +232,39 @@ while IFS= read -r key; do
     done
 done <<< "$ENV_KEYS"
 
+# ---------------------------------------------------------------------------
+# dotfiles (personal, from meta-repo.local.yaml)
+# Each entry is a file or directory under your host home directory. It is
+# mounted read-only at the same path under the container user's home.
+# ---------------------------------------------------------------------------
+CONTAINER_HOME=/home/vscode
+DOTFILES_REL=""
+DOTFILE_COUNT=$(q '.dotfiles // [] | length')
+if [[ "$(q '.dotfiles // [] | tag')" != "!!seq" ]]; then
+    err "dotfiles must be a list (each entry starts with \"- \")"
+    DOTFILE_COUNT=0
+fi
+i=0
+while [[ $i -lt $DOTFILE_COUNT ]]; do
+    entry=$(q ".dotfiles[$i]")
+    entry=${entry%/}
+    case "$entry" in
+        "~/"*) rel=${entry#\~/} ;;
+        "$HOME/"*) rel=${entry#"$HOME"/} ;;
+        *) rel=$entry ;;
+    esac
+    if ! is_safe_relative "$rel"; then
+        err "dotfile '$entry' must be under your home directory (~/...), without '..'"
+    elif [[ ! -e "$HOME/$rel" ]]; then
+        warn "dotfile '$entry' does not exist ($HOME/$rel); skipped"
+    elif in_list "$rel" "$DOTFILES_REL"; then
+        warn "dotfile '$entry' is listed twice; ignoring the duplicate"
+    else
+        DOTFILES_REL="$DOTFILES_REL$rel"$'\n'
+    fi
+    i=$((i + 1))
+done
+
 if [[ $ERRORS -gt 0 ]]; then
     die "$ERRORS problem(s) found; compose.local.yaml was not written"
 fi
@@ -278,6 +311,9 @@ done <<< "$ENV_KEYS"
 
 add_bind() {
     S="$(compose_literal "$1")" T="$2" gen '.services.dev.volumes += [{"type": "bind", "source": strenv(S), "target": strenv(T)}]'
+    if [[ "${3:-}" == ro ]]; then
+        gen '.services.dev.volumes[-1].read_only = true'
+    fi
 }
 VOLUME_PATHS=""
 add_volume() {
@@ -290,6 +326,11 @@ add_volume() {
 # Files from .root/ live in /workspace/
 printf '%s' "$ROOT_ENTRIES" | while IFS= read -r name; do
     [[ -n "$name" ]] && add_bind "../.root/$name" "/workspace/$name"
+done
+
+# Personal dotfiles (aliases etc.), read-only, in the container user's home
+printf '%s' "$DOTFILES_REL" | while IFS= read -r rel; do
+    [[ -n "$rel" ]] && add_bind "$HOME/$rel" "$CONTAINER_HOME/$rel" ro
 done
 
 # The repos, and their separate_mounts
@@ -347,6 +388,10 @@ printf '%s' "$FOLDER_NAMES" | while IFS= read -r name; do
 done
 if $ADMIN; then
     echo "  /workspace/$REPO_NAME  (this repo)"
+fi
+if [[ -n "$DOTFILES_REL" ]]; then
+    echo "  dotfiles (read-only, in $CONTAINER_HOME):"
+    printf '%s' "$DOTFILES_REL" | sed 's/^/    /'
 fi
 echo
 echo "Next: in VS Code run 'Dev Containers: Rebuild and Reopen in Container'."

@@ -93,6 +93,12 @@ RUN curl -fsSL "https://raw.githubusercontent.com/nvm-sh/nvm/${NVM_VERSION}/inst
         printf '\nexport NVM_DIR="%s"\n[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"\n[ -s "$NVM_DIR/bash_completion" ] && [ -n "$BASH_VERSION" ] && . "$NVM_DIR/bash_completion"\n' "$NVM_DIR" >> "$rc"; \
     done
 
+# Personal aliases: if the `dotfiles` setting in meta-repo.local.yaml mounts a
+# ~/.aliases file, load it in interactive bash and zsh. Does nothing otherwise.
+RUN for rc in ~/.bashrc ~/.zshrc; do \
+        printf '\n[ -f ~/.aliases ] && . ~/.aliases\n' >> "$rc"; \
+    done
+
 # bun (latest at build time)
 RUN curl -fsSL https://bun.sh/install | bash
 
